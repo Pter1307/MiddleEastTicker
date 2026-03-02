@@ -444,10 +444,10 @@ function renderCards(){
   let items=f==='all'?[...allNews]:allNews.filter(n=>n.cat.includes(f)||(f==='saudi'&&n.saudi));
   items=items.filter(n=>enabledSources.has(n.s));
   items.sort((a,b)=>{
-    // Live items first, then saudi in 'all', then breaking
-    if(a.live&&!b.live)return -1;if(!a.live&&b.live)return 1;
-    if(f==='all'){if(a.saudi&&!b.saudi)return -1;if(!a.saudi&&b.saudi)return 1}
-    if(a.brk&&!b.brk)return -1;if(!a.brk&&b.brk)return 1;
+    // Pure chronological: newest first (live items have pubDate, static items use index order)
+    if(a.pubDate&&b.pubDate)return b.pubDate-a.pubDate;
+    if(a.pubDate&&!b.pubDate)return -1;
+    if(!a.pubDate&&b.pubDate)return 1;
     return 0;
   });
   document.getElementById('cards').innerHTML=items.map(n=>`
