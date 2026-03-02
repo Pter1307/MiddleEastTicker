@@ -379,8 +379,8 @@ let enabledSources=new Set(mediaSources.map(m=>m.id));
 // ==================== RSS CONFIG ====================
 const REFRESH_MS=60000; // 60 seconds
 const RSS_FEEDS=[
-  // Telegram via RSShub bridge
-  'https://rsshub.app/telegram/channel/Middle_East_Spectator',
+  // Telegram MES via RSShub mirrors
+  'https://rsshub.rssforever.com/telegram/channel/Middle_East_Spectator',
   // Google News aggregated
   'https://news.google.com/rss/search?q=Iran+crisis+OR+Iran+war+OR+Iran+strikes+OR+%22Operation+Epic+Fury%22&hl=en-US&gl=US&ceid=US:en',
   'https://news.google.com/rss/search?q=Saudi+Arabia+Iran+OR+Aramco+OR+Gulf+war&hl=en-US&gl=US&ceid=US:en',
@@ -597,8 +597,11 @@ async function fetchAllFeeds(){
       seen.add(key);
       return true;
     });
-    // Filter for relevance
-    const relevant=unique.filter(item=>RELEVANCE_RE.test(item.title+' '+item.description));
+    // Filter for relevance (Telegram/MES items always pass)
+    const relevant=unique.filter(item=>{
+      const isTelegram=item.link&&item.link.includes('t.me/');
+      return isTelegram||RELEVANCE_RE.test(item.title+' '+item.description);
+    });
     // Remove duplicates against static news
     const fresh=relevant.filter(item=>!isDuplicate(item.title,staticNews));
     // Convert to our format
