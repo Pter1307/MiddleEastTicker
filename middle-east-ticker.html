@@ -145,6 +145,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg0);color:var(--tx1);min
 .mn-tab.active{color:var(--red)}
 .mn-tab.st.active{color:var(--green)}
 
+/* ===== NEW ITEMS NOTIFICATION ===== */
+.new-items-bar{display:none;position:fixed;top:44px;left:50%;transform:translateX(-50%);background:var(--blue);color:#fff;padding:8px 20px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;z-index:150;box-shadow:0 4px 16px rgba(66,165,245,.4);animation:slideDown .3s ease;letter-spacing:.5px}
+.new-items-bar:hover{background:#1e88e5}
+.new-items-bar.visible{display:flex;align-items:center;gap:6px}
+@keyframes slideDown{from{transform:translateX(-50%) translateY(-20px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
+@keyframes cardNew{from{border-color:var(--blue);box-shadow:0 0 12px rgba(66,165,245,.3)}to{border-color:var(--bd);box-shadow:var(--card-shadow)}}
+.card.new-card{animation:cardNew 2s ease forwards}
+.feed-status{font-size:9px;color:var(--tx3);font-family:'JetBrains Mono',monospace;padding:2px 0}
+.feed-status.ok{color:var(--green)}.feed-status.err{color:var(--red)}
+
 /* ===== SCROLLBAR ===== */
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bd);border-radius:3px}
 
@@ -210,6 +220,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg0);color:var(--tx1);min
 
 <div class="ticker"><div class="ticker-lbl">BREAKING</div><div class="ticker-w"><div class="ticker-s" id="tickerS"></div></div></div>
 
+<div class="new-items-bar" id="newItemsBar" onclick="showNewItems()"></div>
 <div class="filters" id="filterBar"></div>
 
 <div class="layout" id="mainLayout">
@@ -223,7 +234,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg0);color:var(--tx1);min
   </div>
 
   <div class="feed">
-    <div class="feed-hdr"><div class="feed-t" id="feedTitle">Middle East — All Updates</div><div class="feed-c" id="fc"></div></div>
+    <div class="feed-hdr"><div><div class="feed-t" id="feedTitle">Middle East — All Updates</div><div class="feed-status" id="feedStatus"></div></div><div class="feed-c" id="fc"></div></div>
     <div id="cards"></div>
   </div>
 
@@ -354,6 +365,9 @@ let liveNews=[];
 let allNews=[...staticNews];
 let lastRefreshTime=null;
 let feedStatus='connecting';
+let knownTitles=new Set(staticNews.map(n=>n.t.toLowerCase().slice(0,50)));
+let pendingNewItems=[];
+let newItemCount=0;
 
 // ==================== CATEGORIES ====================
 const cats=[{id:'all',label:'All News'},{id:'saudi',label:'\u{1F1F8}\u{1F1E6} Saudi Arabia',st:true},{id:'us-strikes',label:'US-Israel Strikes'},{id:'iran-retaliation',label:'Iran Retaliation'},{id:'iran',label:'Inside Iran'},{id:'gcc',label:'Gulf / GCC'},{id:'hormuz',label:'Strait of Hormuz'},{id:'energy',label:'Oil & Energy'},{id:'defense',label:'Defense'},{id:'diplomacy',label:'Diplomacy'},{id:'global',label:'Global'}];
@@ -363,7 +377,7 @@ let activeFilter='all';
 let enabledSources=new Set(mediaSources.map(m=>m.id));
 
 // ==================== RSS CONFIG ====================
-const REFRESH_MS=180000;
+const REFRESH_MS=60000; // 60 seconds
 const RSS_FEEDS=[
   'https://news.google.com/rss/search?q=Iran+crisis+OR+Iran+war+OR+Iran+strikes+OR+%22Operation+Epic+Fury%22&hl=en-US&gl=US&ceid=US:en',
   'https://news.google.com/rss/search?q=Saudi+Arabia+Iran+OR+Aramco+OR+Gulf+war&hl=en-US&gl=US&ceid=US:en',
@@ -553,13 +567,20 @@ function isDuplicate(title,existing){
 
 async function fetchAllFeeds(){
   const btn=document.getElementById('refreshBtn');
+  const statusEl=document.getElementById('feedStatus');
   btn.classList.add('spinning');
   document.getElementById('lastUpd').textContent='Updating...';
+  statusEl.textContent='Fetching feeds...';
+  statusEl.className='feed-status';
   feedStatus='updating';
   let allItems=[];
+  let feedsOk=0,feedsFail=0;
   try{
     const results=await Promise.allSettled(RSS_FEEDS.map(u=>fetchFeed(u)));
-    results.forEach(r=>{if(r.status==='fulfilled')allItems.push(...r.value)});
+    results.forEach(r=>{
+      if(r.status==='fulfilled'&&r.value.length>0){allItems.push(...r.value);feedsOk++}
+      else{feedsFail++}
+    });
     // Sort newest first
     allItems.sort((a,b)=>b.pubDate-a.pubDate);
     // Deduplicate by title similarity
@@ -575,7 +596,7 @@ async function fetchAllFeeds(){
     // Remove duplicates against static news
     const fresh=relevant.filter(item=>!isDuplicate(item.title,staticNews));
     // Convert to our format
-    liveNews=fresh.slice(0,30).map(item=>{
+    const newLiveNews=fresh.slice(0,30).map(item=>{
       const src=mapSource(item.source,item.link);
       const text=item.title+' '+item.description;
       const saudi=/saudi|aramco|riyadh|mbs|tadawul|kingdom/i.test(text);
@@ -592,21 +613,76 @@ async function fetchAllFeeds(){
         tags:extractTags(item.title),
         live:true,
         pubDate:item.pubDate,
+        isNew:false,
       };
     });
+    // Detect genuinely new items since last fetch
+    const brandNew=newLiveNews.filter(n=>{
+      const key=n.t.toLowerCase().slice(0,50);
+      return!knownTitles.has(key);
+    });
+    // Mark new items
+    brandNew.forEach(n=>{n.isNew=true;knownTitles.add(n.t.toLowerCase().slice(0,50))});
+    // Also add existing live titles to known set
+    newLiveNews.forEach(n=>knownTitles.add(n.t.toLowerCase().slice(0,50)));
+    liveNews=newLiveNews;
     allNews=[...liveNews,...staticNews];
     feedStatus='ok';
     lastRefreshTime=new Date();
+    // Show notification if new items found (not on first load)
+    if(brandNew.length>0&&newItemCount>-1){
+      newItemCount=brandNew.length;
+      showNewItemsNotification(brandNew.length);
+    }
+    if(newItemCount===-1)newItemCount=0; // first load done
+    statusEl.textContent=`${feedsOk}/${RSS_FEEDS.length} feeds OK \u00B7 ${liveNews.length} live articles`;
+    statusEl.className='feed-status ok';
   }catch(e){
     console.warn('Feed fetch error:',e);
     feedStatus='error';
     if(liveNews.length===0)allNews=[...staticNews];
+    statusEl.textContent=`Feed error \u2014 showing cached data`;
+    statusEl.className='feed-status err';
   }
   btn.classList.remove('spinning');
   updateRefreshLabel();
+  updateLiveTimes();
   buildFilters();
   renderCards();
   buildTicker();
+}
+
+// Show "N new updates" notification bar
+function showNewItemsNotification(count){
+  const bar=document.getElementById('newItemsBar');
+  bar.textContent=`\u2B06 ${count} new update${count>1?'s':''} \u2014 tap to view`;
+  bar.classList.add('visible');
+  // Auto-hide after 10 seconds
+  clearTimeout(bar._timeout);
+  bar._timeout=setTimeout(()=>bar.classList.remove('visible'),10000);
+}
+
+function showNewItems(){
+  const bar=document.getElementById('newItemsBar');
+  bar.classList.remove('visible');
+  // Scroll feed to top
+  document.querySelector('.feed')?.scrollTo({top:0,behavior:'smooth'});
+  // Re-render so new items show with animation
+  renderCards();
+  // Mark new-card class on fresh items, then remove after animation
+  setTimeout(()=>{
+    document.querySelectorAll('.card.live-item').forEach((card,i)=>{
+      if(i<newItemCount){card.classList.add('new-card')}
+    });
+  },50);
+  newItemCount=0;
+}
+
+// Update time labels on live items every 30s
+function updateLiveTimes(){
+  liveNews.forEach(n=>{
+    if(n.pubDate)n.time=timeAgo(n.pubDate);
+  });
 }
 
 function updateRefreshLabel(){
@@ -616,7 +692,8 @@ function updateRefreshLabel(){
   const ago=Math.floor((Date.now()-lastRefreshTime.getTime())/60000);
   el.textContent=ago<1?'Updated just now':`Updated ${ago}m ago`;
 }
-setInterval(updateRefreshLabel,30000);
+// Update labels and live times every 30s
+setInterval(()=>{updateRefreshLabel();updateLiveTimes();renderCards()},30000);
 
 // ==================== MOBILE NAV ====================
 function switchMobilePanel(panel){
@@ -630,6 +707,7 @@ function switchMobilePanel(panel){
 }
 
 // ==================== INIT ====================
+newItemCount=-1; // flag: first load, don't show notification
 buildMediaPanel();
 buildFilters();
 renderCards();
