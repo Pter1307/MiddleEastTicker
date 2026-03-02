@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Iran Crisis — Live News Dashboard</title>
+<meta name="description" content="Real-time news tracker for the Iran-US crisis. Live updates from multiple sources.">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ===== THEME VARIABLES ===== */
+:root,[data-theme="dark"]{--bg0:#08090c;--bg1:#0e1015;--bg2:#13161d;--bg3:#191d27;--red:#ff3b3b;--green:#00e68a;--amber:#ffc107;--blue:#42a5f5;--saudi-hl:rgba(0,108,53,.12);--saudi-bd:rgba(0,230,138,.35);--tx1:#ebedf0;--tx2:#8b8f98;--tx3:#555964;--bd:#1e222b;--brk:#c62828;--card-shadow:0 1px 3px rgba(0,0,0,.3);--alert-bg:linear-gradient(90deg,#b71c1c,#d32f2f,#b71c1c)}
+[data-theme="light"]{--bg0:#f0f2f5;--bg1:#ffffff;--bg2:#f7f8fa;--bg3:#eef0f3;--red:#dc2626;--green:#059669;--amber:#d97706;--blue:#2563eb;--saudi-hl:rgba(5,150,105,.07);--saudi-bd:rgba(5,150,105,.3);--tx1:#111827;--tx2:#4b5563;--tx3:#9ca3af;--bd:#e5e7eb;--brk:#dc2626;--card-shadow:0 1px 3px rgba(0,0,0,.08);--alert-bg:linear-gradient(90deg,#dc2626,#ef4444,#dc2626)}
+
+/* ===== BASE ===== */
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:var(--bg0);color:var(--tx1);min-height:100vh;overflow-x:hidden;transition:background .3s,color .3s}
+
+/* ===== ALERT ===== */
+.alert-banner{background:var(--alert-bg);padding:7px 16px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:12px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:1.5px;animation:ap 3s infinite}
+@keyframes ap{0%,100%{opacity:1}50%{opacity:.85}}
+.blink{animation:bl 1s step-end infinite}
+@keyframes bl{0%,100%{opacity:1}50%{opacity:0}}
+.alert-full{display:inline}.alert-short{display:none}
+
+/* ===== TOP BAR ===== */
+.topbar{background:var(--bg1);border-bottom:1px solid var(--bd);padding:8px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;transition:background .3s,border-color .3s}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-i{width:34px;height:34px;background:var(--red);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;flex-shrink:0}
+.logo-t{font-size:15px;font-weight:700}.logo-t .sub{display:block;font-size:10px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:2px;margin-top:-1px}
+.top-r{display:flex;align-items:center;gap:10px}
+.live-b{display:flex;align-items:center;gap:6px;background:rgba(255,59,59,.1);border:1px solid rgba(255,59,59,.3);padding:4px 10px;border-radius:16px;font-size:10px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:1.5px;flex-shrink:0}
+.live-b::before{content:'';width:7px;height:7px;background:var(--red);border-radius:50%;animation:pulse 1.3s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,59,59,.5)}50%{box-shadow:0 0 0 5px rgba(255,59,59,0)}}
+.clock{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--tx2);white-space:nowrap}
+.saudi-l{font-size:10px;font-weight:600;color:var(--green);background:rgba(0,230,138,.08);border:1px solid rgba(0,230,138,.2);padding:3px 8px;border-radius:5px;white-space:nowrap}
+.theme-toggle{width:32px;height:32px;border-radius:50%;border:1px solid var(--bd);background:var(--bg2);color:var(--tx2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .2s;flex-shrink:0}
+.theme-toggle:hover{border-color:var(--amber);color:var(--amber)}
+[data-theme="dark"] .theme-toggle::after{content:'\\2600'}
+[data-theme="light"] .theme-toggle::after{content:'\\263E'}
+.refresh-info{display:flex;align-items:center;gap:6px}
+.last-upd{font-size:9px;color:var(--tx3);font-family:'JetBrains Mono',monospace;white-space:nowrap}
+.refresh-btn{width:26px;height:26px;border-radius:50%;border:1px solid var(--bd);background:var(--bg2);color:var(--tx2);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+.refresh-btn:hover{border-color:var(--blue);color:var(--blue)}
+.refresh-btn.spinning{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ===== TICKER ===== */
+.ticker{background:var(--bg1);border-bottom:1px solid var(--bd);display:flex;height:38px;overflow:hidden;transition:background .3s}
+.ticker-lbl{background:var(--brk);color:#fff;font-weight:800;font-size:10px;letter-spacing:2px;padding:0 14px;display:flex;align-items:center;flex-shrink:0}
+.ticker-w{flex:1;overflow:hidden;position:relative}
+.ticker-s{display:flex;white-space:nowrap;animation:sc 120s linear infinite;align-items:center;height:100%;padding-left:14px}
+.ticker-s:hover{animation-play-state:paused}
+.ti{display:inline-flex;align-items:center;gap:7px;padding:0 18px;font-size:12px;font-weight:500;color:var(--tx1);text-decoration:none;transition:color .2s}
+.ti:hover{color:var(--amber)}.ti::before{content:'\25CF';color:var(--red);font-size:5px}
+.ti.sa{color:var(--green);font-weight:600}.ti.sa::before{content:'\1F1F8\1F1E6';font-size:11px}
+@keyframes sc{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+
+/* ===== FILTERS ===== */
+.filters{background:var(--bg1);border-bottom:1px solid var(--bd);padding:0 16px;display:flex;gap:1px;overflow-x:auto;scrollbar-width:none;transition:background .3s}
+.filters::-webkit-scrollbar{display:none}
+.ft{padding:9px 12px;font-size:11.5px;font-weight:600;color:var(--tx3);cursor:pointer;border:none;border-bottom:2px solid transparent;background:none;font-family:inherit;white-space:nowrap;transition:all .2s}
+.ft:hover{color:var(--tx2)}.ft.active{color:var(--red);border-bottom-color:var(--red)}
+.ft.st.active{color:var(--green);border-bottom-color:var(--green)}
+
+/* ===== 3-COL LAYOUT ===== */
+.layout{display:grid;grid-template-columns:240px 1fr 340px;min-height:calc(100vh - 160px)}
+
+/* ===== LEFT: MEDIA PANEL ===== */
+.media-panel{background:var(--bg1);border-right:1px solid var(--bd);padding:12px;overflow-y:auto;max-height:calc(100vh - 160px);position:sticky;top:88px;transition:background .3s}
+.mp-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--tx3);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.mp-title::after{content:'';flex:1;height:1px;background:var(--bd)}
+.mp-group{margin-bottom:16px}
+.mp-group-title{font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;padding-left:4px}
+.mp-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background .15s;font-size:12px}
+.mp-item:hover{background:var(--bg2)}
+.mp-item input[type=checkbox]{accent-color:var(--green);width:14px;height:14px;cursor:pointer;flex-shrink:0}
+.mp-item .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.mp-item .name{flex:1;font-weight:500;color:var(--tx1)}
+.mp-item .type{font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px}
+.mp-actions{display:flex;gap:6px;margin-top:8px}
+.mp-btn{flex:1;padding:6px;background:var(--bg2);border:1px solid var(--bd);border-radius:6px;color:var(--tx2);font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;text-align:center;transition:all .2s}
+.mp-btn:hover{border-color:var(--green);color:var(--green)}
+
+/* ===== CENTER: FEED ===== */
+.feed{padding:14px 16px;overflow-y:auto;max-height:calc(100vh - 160px)}
+.feed-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--bd)}
+.feed-t{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--tx3)}
+.feed-c{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--tx3)}
+
+/* ===== CARD ===== */
+.card{background:var(--bg2);border:1px solid var(--bd);border-radius:9px;padding:14px 16px;margin-bottom:9px;cursor:pointer;transition:all .2s;display:block;text-decoration:none;color:inherit;position:relative;box-shadow:var(--card-shadow)}
+.card:hover{background:var(--bg3);border-color:color-mix(in srgb,var(--bd),var(--tx3) 20%);transform:translateY(-1px)}
+.card.saudi{background:var(--saudi-hl);border-color:var(--saudi-bd)}
+.card.saudi:hover{background:color-mix(in srgb,var(--saudi-hl),var(--green) 5%)}
+.card.brk{border-left:3px solid var(--red)}
+.card.live-item{border-top:2px solid var(--blue)}
+.card-top{display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap}
+.src-b{font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:.3px}
+.src-b.mes{background:#33291a;color:var(--amber)}.src-b.cnbc{background:#004d40;color:#80cbc4}.src-b.aljazeera{background:#33291a;color:var(--amber)}
+.src-b.alarabiya{background:#1a237e;color:#90caf9}.src-b.arabnews{background:#1b5e20;color:#a5d6a7}.src-b.cnn{background:#b71c1c;color:#ffcdd2}
+.src-b.bdefense{background:#1a237e;color:#9fa8da}.src-b.abc{background:#01579b;color:#81d4fa}.src-b.time{background:#880e4f;color:#f48fb1}
+.src-b.fortune{background:#4a148c;color:#ce93d8}.src-b.meforum{background:#3e2723;color:#bcaaa4}.src-b.lloyds{background:#004d40;color:#80cbc4}
+.src-b.indiatv{background:#e65100;color:#ffcc80}.src-b.kpler{background:#283593;color:#9fa8da}
+.src-b.bbc{background:#6d0019;color:#ffb3b3}.src-b.reuters{background:#e65100;color:#ffe0b2}.src-b.guardian{background:#005a3a;color:#a5d6a7}
+.src-b.nyt{background:#1a1a1a;color:#d4d4d4}.src-b.ap{background:#c62828;color:#ffcdd2}
+.src-b.live{background:rgba(66,165,245,.15);color:var(--blue)}
+.sf{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;color:var(--green);background:rgba(0,230,138,.12);padding:2px 6px;border-radius:3px;letter-spacing:.5px;text-transform:uppercase}
+.card:not(.saudi) .sf{display:none}
+.bt{font-size:8px;font-weight:800;color:#fff;background:var(--red);padding:2px 5px;border-radius:3px;letter-spacing:1px;text-transform:uppercase}
+.lt{font-size:8px;font-weight:700;color:var(--blue);background:rgba(66,165,245,.12);padding:2px 5px;border-radius:3px;letter-spacing:.5px;text-transform:uppercase}
+.ct{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--tx3)}
+.card-title{font-size:13.5px;font-weight:700;line-height:1.4;margin-bottom:5px}
+.card-desc{font-size:11.5px;color:var(--tx2);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tags{display:flex;gap:4px;margin-top:7px;flex-wrap:wrap}
+.tag{font-size:9px;padding:2px 6px;border-radius:3px;background:color-mix(in srgb,var(--bg2),var(--tx3) 10%);color:var(--tx3)}
+.tag.ts{background:rgba(0,230,138,.1);color:var(--green)}
+
+/* ===== RIGHT: SIDEBAR ===== */
+.sidebar{padding:12px;background:var(--bg1);overflow-y:auto;max-height:calc(100vh - 160px);position:sticky;top:88px;border-left:1px solid var(--bd);transition:background .3s}
+.sb-s{margin-bottom:18px}
+.sb-t{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--tx3);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.sb-t::after{content:'';flex:1;height:1px;background:var(--bd)}
+.stb{border-radius:8px;padding:12px;margin-bottom:6px;transition:background .3s,border-color .3s}
+.stb.r{background:rgba(198,40,40,.08);border:1px solid rgba(198,40,40,.25)}
+.stb.g{background:var(--saudi-hl);border:1px solid var(--saudi-bd)}
+.stb.r2{background:rgba(198,40,40,.15);border:1px solid rgba(198,40,40,.4)}
+.stb h4{font-size:11px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:5px}
+.stb.r h4,.stb.r2 h4{color:var(--red)}.stb.g h4{color:var(--green)}
+.stb p{font-size:10.5px;color:var(--tx2);line-height:1.45}
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.sc{background:var(--bg2);border:1px solid var(--bd);border-radius:6px;padding:8px 10px;transition:background .3s}
+.sc .l{font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px}
+.sc .v{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700}
+.v.r{color:var(--red)}.v.g{color:var(--green)}.v.a{color:var(--amber)}.v.b{color:var(--blue)}
+.tli{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--bd);font-size:11px}
+.tli:last-child{border-bottom:none}
+.tli .tm{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--tx3);white-space:nowrap;min-width:40px;padding-top:1px}
+.tli .tx{color:var(--tx2);line-height:1.4}.tli .tx.sa{color:var(--green);font-weight:600}
+
+/* ===== MOBILE BOTTOM NAV ===== */
+.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--bg1);border-top:1px solid var(--bd);z-index:200;padding:6px 0;padding-bottom:max(6px,env(safe-area-inset-bottom))}
+.mobile-nav-inner{display:flex;justify-content:space-around}
+.mn-tab{flex:1;padding:8px 4px;font-size:11px;font-weight:600;color:var(--tx3);background:none;border:none;font-family:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:color .2s}
+.mn-tab .mn-icon{font-size:16px}
+.mn-tab.active{color:var(--red)}
+.mn-tab.st.active{color:var(--green)}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bd);border-radius:3px}
+
+/* ===== MOBILE RESPONSIVE ===== */
+@media(max-width:1100px){
+  .layout{grid-template-columns:1fr}
+  .media-panel,.sidebar{position:static;max-height:none}
+}
+@media(max-width:768px){
+  .layout{grid-template-columns:1fr;min-height:auto;padding-bottom:60px}
+  .media-panel,.sidebar{display:none}
+  .layout.show-sources .media-panel{display:block}
+  .layout.show-sources .feed,.layout.show-sources .sidebar{display:none}
+  .layout.show-status .sidebar{display:block}
+  .layout.show-status .feed,.layout.show-status .media-panel{display:none}
+  .mobile-nav{display:block}
+  .alert-full{display:none}.alert-short{display:inline}
+  .alert-banner{font-size:10px;padding:6px 10px;letter-spacing:1px}
+  .topbar{padding:6px 12px}
+  .logo-t{font-size:13px}.logo-t .sub{font-size:9px;letter-spacing:1.5px}
+  .logo-i{width:30px;height:30px;font-size:13px}
+  .saudi-l{display:none}
+  .refresh-info .last-upd{display:none}
+  .top-r{gap:8px}
+  .ticker{height:34px}
+  .ti{font-size:11px;padding:0 14px}
+  .filters{padding:0 10px}
+  .ft{padding:8px 10px;font-size:11px}
+  .feed{padding:10px 12px;max-height:none}
+  .card{padding:12px 14px;margin-bottom:8px}
+  .card-title{font-size:13px}
+  .card-desc{font-size:11px;-webkit-line-clamp:3}
+  .sidebar{border-left:none;border-top:1px solid var(--bd)}
+  .media-panel{border-right:none;border-bottom:1px solid var(--bd)}
+  .sg{grid-template-columns:1fr 1fr}
+}
+@media(max-width:400px){
+  .logo-t .sub{display:none}
+  .clock{font-size:10px}
+  .card-title{font-size:12.5px}
+}
+</style>
+</head>
+<body>
+
+<div class="alert-banner">
+  <span class="blink">&#9888;</span>
+  <span class="alert-full">ACTIVE CONFLICT — IRAN STRIKES ARAMCO RAS TANNOURA — OPERATION EPIC FURY ONGOING</span>
+  <span class="alert-short">ACTIVE CONFLICT — OPERATION EPIC FURY</span>
+  <span class="blink">&#9888;</span>
+</div>
+
+<div class="topbar">
+  <div class="logo"><div class="logo-i">&#9889;</div><div class="logo-t">IRAN CRISIS TRACKER<span class="sub">Live News Dashboard</span></div></div>
+  <div class="top-r">
+    <div class="refresh-info"><span class="last-upd" id="lastUpd">Connecting...</span><button class="refresh-btn" id="refreshBtn" onclick="fetchAllFeeds()" title="Refresh now">&#8635;</button></div>
+    <span class="saudi-l">&#x1F1F8;&#x1F1E6; Saudi items highlighted</span>
+    <div class="live-b">LIVE</div>
+    <div class="clock" id="clock"></div>
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light mode"></button>
+  </div>
+</div>
+
+<div class="ticker"><div class="ticker-lbl">BREAKING</div><div class="ticker-w"><div class="ticker-s" id="tickerS"></div></div></div>
+
+<div class="filters" id="filterBar"></div>
+
+<div class="layout" id="mainLayout">
+  <div class="media-panel" id="mediaPanel">
+    <div class="mp-title">&#x1F4E1; Media Sources</div>
+    <div class="mp-actions">
+      <button class="mp-btn" onclick="toggleAll(true)">&#10003; All On</button>
+      <button class="mp-btn" onclick="toggleAll(false)">&#10007; All Off</button>
+    </div>
+    <div id="mediaList"></div>
+  </div>
+
+  <div class="feed">
+    <div class="feed-hdr"><div class="feed-t" id="feedTitle">Iran Crisis — All Updates</div><div class="feed-c" id="fc"></div></div>
+    <div id="cards"></div>
+  </div>
+
+  <div class="sidebar">
+    <div class="sb-s">
+      <div class="sb-t">&#x1F1F8;&#x1F1E6; Saudi Status</div>
+      <div class="stb r2"><h4>&#x1F525; NEW: Aramco Ras Tannoura struck by Iranian drone</h4><p>A Shahed-136 drone hit the Ras Tanura refinery Monday morning. Fire reported as "small and controlled." No casualties. This is the first direct Iranian strike on Saudi oil infrastructure in this conflict.</p></div>
+      <div class="stb g"><h4>&#x1F6E1; Air Defense: Active</h4><p>Saudi forces intercepted missiles on Riyadh &amp; Eastern Province. Kingdom summoned Iran's ambassador. Joint statement with US/UAE condemning attacks.</p></div>
+      <div class="stb g"><h4>&#9875; Ports: Operational</h4><p>All Saudi ports running normally. Tadawul down ~1.5%. OPEC+ boosting output 206k bbl/day.</p></div>
+    </div>
+    <div class="sb-s">
+      <div class="sb-t">Conflict Snapshot</div>
+      <div class="sg">
+        <div class="sc"><div class="l">Countries Hit</div><div class="v r">9</div></div>
+        <div class="sc"><div class="l">US KIA</div><div class="v r">3</div></div>
+        <div class="sc"><div class="l">Brent Crude</div><div class="v a">~$85-90</div></div>
+        <div class="sc"><div class="l">Hormuz</div><div class="v r">THREAT</div></div>
+        <div class="sc"><div class="l">Iran Internet</div><div class="v r">4%</div></div>
+        <div class="sc"><div class="l">Aramco</div><div class="v r">HIT</div></div>
+      </div>
+    </div>
+    <div class="sb-s">
+      <div class="sb-t">Key Timeline</div>
+      <div class="tli"><div class="tm">Feb 28</div><div class="tx">US-Israel launch Operation Epic Fury — strikes on Tehran, Isfahan, Qom</div></div>
+      <div class="tli"><div class="tm">Feb 28</div><div class="tx">Khamenei confirmed killed along with top security officials</div></div>
+      <div class="tli"><div class="tm">Feb 28</div><div class="tx">Iran retaliates — missiles/drones at Israel, UAE, Qatar, Kuwait, Bahrain, Jordan, Saudi Arabia, Iraq</div></div>
+      <div class="tli"><div class="tm">Feb 28</div><div class="tx sa">&#x1F1F8;&#x1F1E6; Saudi Arabia confirms interceptions on Riyadh &amp; Eastern Province</div></div>
+      <div class="tli"><div class="tm">Mar 1</div><div class="tx">Blasts over Dubai, Doha, Manama day 2; airports struck</div></div>
+      <div class="tli"><div class="tm">Mar 1</div><div class="tx">3 US service members killed; CENTCOM operations continue</div></div>
+      <div class="tli"><div class="tm">Mar 1</div><div class="tx">Tankers hit near Hormuz; shipping paused; Brent +10%</div></div>
+      <div class="tli"><div class="tm">Mar 1</div><div class="tx sa">&#x1F1F8;&#x1F1E6; Saudi Defense Min coordinates with Bahrain, Qatar, Kuwait</div></div>
+      <div class="tli"><div class="tm">Mar 1</div><div class="tx sa">&#x1F1F8;&#x1F1E6; US, Saudi, UAE joint statement condemning Iran</div></div>
+      <div class="tli"><div class="tm">Mar 1</div><div class="tx">GCC FMs convene — all 6 states reserve right to respond</div></div>
+      <div class="tli"><div class="tm">Mar 2</div><div class="tx sa" style="color:var(--red);font-weight:700">&#x1F1F8;&#x1F1E6;&#x1F525; Shahed-136 drone strikes Aramco Ras Tannoura refinery</div></div>
+      <div class="tli"><div class="tm">Mar 2</div><div class="tx">IDF intensifies strikes on Beirut &amp; Southern Lebanon</div></div>
+    </div>
+  </div>
+</div>
+
+<nav class="mobile-nav">
+  <div class="mobile-nav-inner">
+    <button class="mn-tab active" data-panel="feed" onclick="switchMobilePanel('feed')"><span class="mn-icon">&#x1F4F0;</span>Feed</button>
+    <button class="mn-tab st" data-panel="status" onclick="switchMobilePanel('status')"><span class="mn-icon">&#x1F4CA;</span>Status</button>
+    <button class="mn-tab" data-panel="sources" onclick="switchMobilePanel('sources')"><span class="mn-icon">&#x1F4E1;</span>Sources</button>
+  </div>
+</nav>
+
+<script>
+// ==================== THEME ====================
+function initTheme(){
+  const saved=localStorage.getItem('ticker-theme');
+  if(saved)document.documentElement.setAttribute('data-theme',saved);
+  else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.setAttribute('data-theme','light');
+}
+function toggleTheme(){
+  const cur=document.documentElement.getAttribute('data-theme');
+  const next=cur==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',next);
+  localStorage.setItem('ticker-theme',next);
+}
+initTheme();
+
+// ==================== CLOCK ====================
+setInterval(()=>{const n=new Date(),t=new Date(n.toLocaleString('en-US',{timeZone:'Asia/Riyadh'}));document.getElementById('clock').textContent=`${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}:${String(t.getSeconds()).padStart(2,'0')} AST`},1000);
+
+// ==================== MEDIA SOURCES ====================
+const mediaSources=[
+  {id:'live',name:'Live RSS Feeds',color:'#42a5f5',group:'Live',type:'AUTO',url:'#'},
+  {id:'mes',name:'Middle East Spectator',color:'#ffc107',group:'Telegram',type:'Fast',url:'https://t.me/Middle_East_Spectator'},
+  {id:'alarabiya',name:'Al Arabiya',color:'#1a237e',group:'News',type:'SA',url:'https://english.alarabiya.net/News/saudi-arabia'},
+  {id:'arabnews',name:'Arab News',color:'#1b5e20',group:'News',type:'SA',url:'https://www.arabnews.com/'},
+  {id:'aljazeera',name:'Al Jazeera',color:'#b8860b',group:'News',type:'ME',url:'https://www.aljazeera.com/news/liveblog/2026/2/28/live-israel-launches-attacks-on-iran-multiple-explosions-heard-in-tehran'},
+  {id:'cnn',name:'CNN',color:'#b71c1c',group:'News',type:'US',url:'https://edition.cnn.com/world/live-news/israel-iran-attack-02-28-26-hnk-intl'},
+  {id:'cnbc',name:'CNBC',color:'#00838f',group:'News',type:'US',url:'https://www.cnbc.com/2026/03/01/us-iran-live-updates-khamenei-death-trump-gulf-strikes.html'},
+  {id:'bbc',name:'BBC News',color:'#6d0019',group:'News',type:'UK',url:'https://www.bbc.com/news/world/middle_east'},
+  {id:'abc',name:'ABC News',color:'#01579b',group:'News',type:'US',url:'https://abc7.com/live-updates/iran-live-updates-trump-says-major-combat-operations-have-begun/18660347/'},
+  {id:'bdefense',name:'Breaking Defense',color:'#37474f',group:'Analysis',type:'Mil',url:'https://breakingdefense.com/2026/03/iran-attacks-uae-saudi-missiles-drones-gcc-air-defense/'},
+  {id:'time',name:'TIME',color:'#880e4f',group:'News',type:'US',url:'https://time.com/7381884/iran-missiles-dubai-palm-gulf/'},
+  {id:'fortune',name:'Fortune',color:'#4a148c',group:'News',type:'Econ',url:'https://fortune.com/2026/03/01/oil-prices-tanker-traffic-strait-of-hormuz-iran-attacks-us-israel-irgc-warning/'},
+  {id:'meforum',name:'ME Forum',color:'#3e2723',group:'Analysis',type:'Think Tank',url:'https://www.meforum.org/mef-reports/iran-strike-scenarios-retaliation-transition-and-the-path-forward'},
+  {id:'lloyds',name:"Lloyd's List / Argus",color:'#004d40',group:'Shipping',type:'Maritime',url:'https://www.lloydslist.com'},
+  {id:'indiatv',name:'India TV News',color:'#e65100',group:'News',type:'India',url:'https://www.indiatvnews.com/'},
+  {id:'kpler',name:'Kpler',color:'#283593',group:'Analysis',type:'Energy',url:'https://www.kpler.com/blog/us-iran-conflict-strait-of-hormuz-crisis-reshapes-global-oil-markets'},
+];
+
+// ==================== STATIC NEWS DATA ====================
+const staticNews=[
+  {t:"\u{1F525} BREAKING: Iran Shahed-136 drone strikes Aramco refinery at Ras Tannoura",d:"A Shahed-136 drone hit Saudi Aramco's key Ras Tanura oil facility Monday morning, triggering a fire. Reports indicate the blaze is 'small and controlled' with no casualties. First direct Iranian strike on Saudi oil infrastructure in this conflict \u2014 major escalation.",s:"mes",sn:"MES / India TV",time:"JUST NOW",url:"https://t.me/Middle_East_Spectator",brk:true,saudi:true,cat:["saudi","energy","iran-retaliation"],tags:["Aramco","Ras Tannoura","Shahed-136","Oil"],live:false},
+  {t:"Kpler warns: If Ras Tanura or Jebel Ali sustains significant damage, supply impact would be 'immediate and severe'",d:"Energy intelligence firm Kpler had warned that continued Iranian strikes on Saudi Arabia raise stakes for Gulf decision-making. Ras Tanura is one of Saudi Arabia's most critical export terminals.",s:"kpler",sn:"Kpler",time:"1d ago",url:"https://www.kpler.com/blog/us-iran-conflict-strait-of-hormuz-crisis-reshapes-global-oil-markets",brk:false,saudi:true,cat:["saudi","energy","analysis"],tags:["Kpler","Ras Tanura","Oil Supply"],live:false},
+  {t:"Saudi Arabia intercepts Iranian missiles on Riyadh & Eastern Province \u2014 reserves right to retaliate",d:"Saudi foreign ministry confirmed 'blatant and cowardly' attacks were repelled. The Kingdom will take all necessary measures including 'the option of responding to aggression.'",s:"alarabiya",sn:"Al Arabiya",time:"Feb 28",url:"https://english.alarabiya.net/News/saudi-arabia/2026/02/28/saudi-arabia-says-reserves-right-of-response-after-iran-attacks-riyadh-east",brk:true,saudi:true,cat:["saudi","defense","iran-retaliation"],tags:["Riyadh","Air Defense"],live:false},
+  {t:"MBS coordinates with UAE, Qatar, Kuwait, Bahrain & Jordan leaders after strikes",d:"Crown Prince Mohammed bin Salman conducted urgent calls with all Gulf and regional leaders to coordinate unified response.",s:"alarabiya",sn:"Al Arabiya",time:"12h ago",url:"https://english.alarabiya.net/News/saudi-arabia",brk:true,saudi:true,cat:["saudi","diplomacy","gcc"],tags:["MBS","GCC"],live:false},
+  {t:"Saudi Arabia summons Iranian ambassador over Gulf attacks",d:"Significant diplomatic escalation \u2014 Saudi Arabia summoned Iran's ambassador, signaling potential end of the 2023 China-brokered rapprochement.",s:"alarabiya",sn:"Al Arabiya",time:"18h ago",url:"https://www.timesofisrael.com/liveblog_entry/saudi-summons-iran-ambassador-over-gulf-attacks-foreign-ministry-says/",brk:true,saudi:true,cat:["saudi","diplomacy"],tags:["Ambassador","Rapprochement"],live:false},
+  {t:"Saudi Defense Minister coordinates with Bahrain, Qatar & Kuwait defense chiefs",d:"Prince Khalid bin Salman affirmed solidarity against Iranian aggression and discussed joint defense measures with Gulf counterparts.",s:"aljazeera",sn:"Al Jazeera",time:"10h ago",url:"https://www.aljazeera.com/amp/news/liveblog/2026/2/28/live-israel-launches-attacks-on-iran-multiple-explosions-heard-in-tehran",brk:false,saudi:true,cat:["saudi","defense","gcc"],tags:["Prince Khalid","Military"],live:false},
+  {t:"US, Saudi Arabia, UAE issue joint statement condemning Iranian retaliation",d:"Joint statement from the US, Saudi Arabia, UAE and other coalition partners condemned Iran's strikes and pledged collective defense.",s:"abc",sn:"ABC News",time:"4h ago",url:"https://abc7.com/live-updates/iran-live-updates-trump-says-major-combat-operations-have-begun/18660347/",brk:true,saudi:true,cat:["saudi","diplomacy","us"],tags:["Coalition","Joint Statement"],live:false},
+  {t:"Saudi shifts to active coalition stance \u2014 dramatic departure from previous posture",d:"Saudi Arabia condemned Iran by name and offered 'all its capabilities,' positioning itself as an active coalition participant rather than a cautious mediator.",s:"meforum",sn:"ME Forum",time:"2d ago",url:"https://www.meforum.org/mef-reports/iran-strike-scenarios-retaliation-transition-and-the-path-forward",brk:false,saudi:true,cat:["saudi","analysis"],tags:["Coalition","Strategy"],live:false},
+  {t:"All Saudi ports operating normally despite regional disruptions",d:"Unlike Kuwait, Bahrain, and Dubai which suspended operations, all Saudi ports remain fully operational per GAC.",s:"lloyds",sn:"Lloyd's List",time:"18h ago",url:"https://www.lloydslist.com",brk:false,saudi:true,cat:["saudi","economy","shipping"],tags:["Ports","Trade"],live:false},
+  {t:"Saudi pipeline capacity can partially bypass Hormuz \u2014 2.6M bbl/day",d:"Saudi Arabia and UAE have bypass infrastructure, though this is a fraction of the 20M bbl/day normally transiting the strait.",s:"aljazeera",sn:"Al Jazeera",time:"2h ago",url:"https://www.aljazeera.com/news/2026/3/1/how-us-israel-attacks-on-iran-threaten-the-strait-of-hormuz-oil-markets",brk:false,saudi:true,cat:["saudi","energy"],tags:["Pipeline","Hormuz"],live:false},
+  {t:"OPEC+ (Saudi-led) agrees to boost oil output amid conflict",d:"Eight OPEC+ members agreed to increase production by 206k bbl/day in April. ~4.5M bbl/day spare capacity, mostly in Saudi Arabia and UAE.",s:"fortune",sn:"Fortune",time:"11h ago",url:"https://fortune.com/2026/03/01/oil-prices-tanker-traffic-strait-of-hormuz-iran-attacks-us-israel-irgc-warning/",brk:false,saudi:true,cat:["saudi","energy"],tags:["OPEC+","Oil"],live:false},
+  {t:"US approves $9B sale of 730 Patriot PAC-3 MSE missiles to Saudi Arabia",d:"Massive defense sale bolstering Saudi air defense capabilities amid regional crisis.",s:"bdefense",sn:"Breaking Defense",time:"2d ago",url:"https://saudiarabia.liveuamap.com/",brk:false,saudi:true,cat:["saudi","defense","us"],tags:["Patriot","$9B"],live:false},
+  {t:"GCC civil defense activated: shelter-in-place, school closures across Gulf",d:"All GCC states activated comprehensive civil defense including shelter alerts, school closures, and controlled movement.",s:"bdefense",sn:"Breaking Defense",time:"8h ago",url:"https://breakingdefense.com/2026/03/iran-attacks-uae-saudi-missiles-drones-gcc-air-defense/",brk:false,saudi:true,cat:["saudi","defense","gcc"],tags:["Civil Defense","Schools"],live:false},
+  {t:"US & Israel launch Operation Epic Fury \u2014 massive strikes on Tehran, Isfahan, Qom",d:"Coordinated strikes targeted Iran's top leaders, IRGC HQ, and air defenses. Most significant US Middle East operation since Iraq 2003.",s:"cnbc",sn:"CNBC",time:"36h ago",url:"https://www.cnbc.com/2026/03/01/us-iran-live-updates-khamenei-death-trump-gulf-strikes.html",brk:true,saudi:false,cat:["us-strikes","iran"],tags:["Epic Fury","Tehran"],live:false},
+  {t:"Khamenei confirmed killed along with top security officials",d:"Iran's cabinet confirmed Supreme Leader's death. Dozens of IRGC commanders and security council members also killed.",s:"aljazeera",sn:"Al Jazeera",time:"1d ago",url:"https://www.aljazeera.com/news/liveblog/2026/2/28/live-israel-launches-attacks-on-iran-multiple-explosions-heard-in-tehran",brk:true,saudi:false,cat:["us-strikes","iran"],tags:["Khamenei","IRGC"],live:false},
+  {t:"Iran forms interim leadership council \u2014 vows retaliation",d:"Larijani announced temporary council. Iran declared 40 days of mourning. Parliament speaker warned US and Israel 'will pay.'",s:"abc",sn:"ABC News",time:"6h ago",url:"https://abc7chicago.com/live-updates/iran-live-updates-trump-says-major-combat-operations-have-begun/18660347/entry/18664428/",brk:true,saudi:false,cat:["iran","political"],tags:["Larijani","Succession"],live:false},
+  {t:"Trump calls on Iranians to 'rise up' \u2014 warns against further escalation",d:"President warned Iran against continuing strikes, said there will 'likely' be more US casualties, urged regime change.",s:"cnn",sn:"CNN",time:"10h ago",url:"https://edition.cnn.com/world/live-news/israel-iran-attack-02-28-26-hnk-intl",brk:false,saudi:false,cat:["us-strikes","political"],tags:["Trump","Warning"],live:false},
+  {t:"3 US service members killed, 5 wounded \u2014 CENTCOM confirms first casualties",d:"CENTCOM announced fatalities; 'major combat operations continue.' Iran's IRGC claimed far higher US casualties (unconfirmed).",s:"abc",sn:"ABC News",time:"8h ago",url:"https://abc7chicago.com/live-updates/iran-live-updates-trump-says-major-combat-operations-have-begun/18660347/entry/18664428/",brk:true,saudi:false,cat:["us-strikes","casualties"],tags:["CENTCOM","KIA"],live:false},
+  {t:"148 killed in Minab school airstrike \u2014 deadliest civilian incident",d:"A girls' school in southern Iran was hit in US-Israeli strikes. International condemnation followed.",s:"cnn",sn:"CNN",time:"20h ago",url:"https://edition.cnn.com/world/live-news/israel-iran-attack-02-28-26-hnk-intl",brk:true,saudi:false,cat:["us-strikes","casualties"],tags:["Civilians","Minab"],live:false},
+  {t:"Celebrations across Iran after Khamenei's death",d:"Cheers heard in parts of Iran. Meanwhile pro-regime mourning crowds gathered in Tehran.",s:"cnn",sn:"CNN",time:"18h ago",url:"https://edition.cnn.com/world/live-news/israel-iran-attack-02-28-26-hnk-intl",brk:false,saudi:false,cat:["iran","political"],tags:["Protests","Tehran"],live:false},
+  {t:"Iran strikes 9 countries in 36 hours \u2014 'nightmare scenario' for GCC",d:"For the first time in history, all GCC states targeted by the same actor within 24 hours. Hundreds of missiles and drones launched.",s:"bdefense",sn:"Breaking Defense",time:"8h ago",url:"https://breakingdefense.com/2026/03/iran-attacks-uae-saudi-missiles-drones-gcc-air-defense/",brk:true,saudi:false,cat:["iran-retaliation","gcc"],tags:["GCC","Drones"],live:false},
+  {t:"UAE: 3 killed, 58 injured \u2014 165 ballistic missiles, 541 drones launched",d:"UAE Defense Ministry confirmed massive Iranian barrage. 35 drones fell within territory causing damage and casualties.",s:"abc",sn:"ABC News",time:"4h ago",url:"https://abc7chicago.com/live-updates/iran-live-updates-trump-says-major-combat-operations-have-begun/18660347/entry/18664428/",brk:true,saudi:false,cat:["iran-retaliation","gcc"],tags:["UAE","Casualties"],live:false},
+  {t:"Dubai & Abu Dhabi airports struck \u2014 Burj Al Arab facade damaged",d:"Airports in Dubai, Abu Dhabi, Kuwait hit. Intercepted drone caused fire on Burj Al Arab. Jebel Ali Port suspended.",s:"time",sn:"TIME",time:"12h ago",url:"https://time.com/7381884/iran-missiles-dubai-palm-gulf/",brk:true,saudi:false,cat:["iran-retaliation","aviation"],tags:["Dubai","Airport"],live:false},
+  {t:"US 5th Fleet HQ in Bahrain hit \u2014 parts of base damaged",d:"Video confirmed damage at US Naval Support Activity. Bahrain intercepted 45 missiles and 9 drones.",s:"bdefense",sn:"Breaking Defense",time:"1d ago",url:"https://breakingdefense.com/2026/03/iran-attacks-uae-saudi-missiles-drones-gcc-air-defense/",brk:true,saudi:false,cat:["iran-retaliation","us"],tags:["5th Fleet","Bahrain"],live:false},
+  {t:"GCC foreign ministers \u2014 all 6 states 'reserve right to respond'",d:"Unprecedented joint statement from all GCC FMs warned of collective response. Most unified GCC defense posture in history.",s:"aljazeera",sn:"Al Jazeera",time:"6h ago",url:"https://www.aljazeera.com/amp/news/liveblog/2026/2/28/live-israel-launches-attacks-on-iran-multiple-explosions-heard-in-tehran",brk:true,saudi:false,cat:["gcc","diplomacy"],tags:["GCC","Response"],live:false},
+  {t:"MES reports: IRGC says attacks 'will continue relentlessly until enemy defeated'",d:"Iranian Revolutionary Guard claimed all Israeli and US targets in the Middle East struck. Warned all US assets in region are 'legitimate targets.'",s:"mes",sn:"MES",time:"12h ago",url:"https://t.me/Middle_East_Spectator",brk:false,saudi:false,cat:["iran-retaliation","iran"],tags:["IRGC","Escalation"],live:false},
+  {t:"Three ships attacked in Strait of Hormuz \u2014 tanker traffic halted",d:"Tanker struck near Oman; two more hit near UAE. 150+ tankers anchored outside. Maersk suspended all Hormuz transits.",s:"fortune",sn:"Fortune",time:"11h ago",url:"https://fortune.com/2026/03/01/oil-prices-tanker-traffic-strait-of-hormuz-iran-attacks-us-israel-irgc-warning/",brk:true,saudi:false,cat:["hormuz","energy"],tags:["Tankers","Maersk"],live:false},
+  {t:"Oil prices surge 10% \u2014 Brent ~$80; analysts warn $100 if Hormuz stays shut",d:"Brent jumped from $73 to ~$80 OTC Sunday. Barclays forecasts $100/bbl. Monday open expected $85-90 range.",s:"fortune",sn:"Fortune",time:"11h ago",url:"https://fortune.com/2026/03/01/oil-prices-tanker-traffic-strait-of-hormuz-iran-attacks-us-israel-irgc-warning/",brk:true,saudi:false,cat:["energy","economy"],tags:["$80/bbl","Brent"],live:false},
+  {t:"IRGC warns: 'No ship allowed to pass Strait of Hormuz'",d:"VHF transmissions warned passage forbidden. Iran FM later said 'no intention of closing at present.' GPS jamming up significantly.",s:"aljazeera",sn:"Al Jazeera",time:"2h ago",url:"https://www.aljazeera.com/news/2026/3/1/how-us-israel-attacks-on-iran-threaten-the-strait-of-hormuz-oil-markets",brk:false,saudi:false,cat:["hormuz","iran"],tags:["IRGC","GPS"],live:false},
+  {t:"9 killed in Israel \u2014 Iranian missile destroys synagogue in Beit Shemesh",d:"Missile smashed bomb shelter near Jerusalem. Warhead fell less than 1km from Temple Mount.",s:"abc",sn:"ABC News",time:"5h ago",url:"https://abc7.com/live-updates/iran-live-updates-trump-says-major-combat-operations-have-begun/18660347/",brk:true,saudi:false,cat:["iran-retaliation","israel"],tags:["Israel","Casualties"],live:false},
+  {t:"IDF intensifies strikes on Beirut & Southern Lebanon",d:"New strikes on Beirut and southern Lebanon overnight targeting senior Hezbollah members. IDF warned intensity would increase.",s:"abc",sn:"ABC News",time:"1h ago",url:"https://abc7.com/live-updates/iran-live-updates-trump-says-major-combat-operations-have-begun/18660347/",brk:true,saudi:false,cat:["israel","lebanon"],tags:["Beirut","Hezbollah"],live:false},
+  {t:"Eight killed as protesters storm US Consulate in Karachi",d:"Violent protests in Pakistan after Khamenei death. Enhanced security measures ordered countrywide.",s:"arabnews",sn:"Arab News",time:"2h ago",url:"https://www.arabnews.com/",brk:true,saudi:false,cat:["global"],tags:["Pakistan","Karachi"],live:false},
+  {t:"Global flights in chaos \u2014 Gulf airspace virtually empty",d:"Airspace over Iran, Iraq, Kuwait, Israel, Bahrain empty. Major airlines suspended Middle East routes.",s:"cnbc",sn:"CNBC",time:"7h ago",url:"https://www.cnbc.com/2026/03/01/us-iran-live-updates-khamenei-death-trump-gulf-strikes.html",brk:false,saudi:false,cat:["aviation","gcc"],tags:["Airspace","Flights"],live:false},
+  {t:"Kuwait stock exchange suspended \u2014 Gulf markets tumble",d:"Kuwait suspended trading. Muscat -3%, Tadawul -1.5%, Qatar -2%, Amman -2%.",s:"cnbc",sn:"CNBC",time:"2h ago",url:"https://www.cnbc.com/2026/03/01/us-iran-live-updates-khamenei-death-trump-gulf-strikes.html",brk:false,saudi:false,cat:["economy","gcc"],tags:["Markets","Kuwait"],live:false},
+  {t:"EU calls for 'maximum restraint' \u2014 UK authorizes bases for defensive strikes",d:"Kallas called for civilian protection. UK PM accepted US request to use British bases for defensive operations.",s:"cnbc",sn:"CNBC",time:"5h ago",url:"https://www.cnbc.com/2026/03/01/us-iran-live-updates-khamenei-death-trump-gulf-strikes.html",brk:false,saudi:false,cat:["global","diplomacy"],tags:["EU","UK"],live:false},
+  {t:"Iran near-total internet shutdown \u2014 connectivity at 4%",d:"NetBlocks confirmed near-total blackout since Saturday. National connectivity fell to 4% of normal.",s:"cnbc",sn:"CNBC",time:"1d ago",url:"https://www.cnbc.com/2026/03/01/us-iran-live-updates-khamenei-death-trump-gulf-strikes.html",brk:false,saudi:false,cat:["iran"],tags:["Internet","Blackout"],live:false},
+];
+
+// ==================== LIVE NEWS STATE ====================
+let liveNews=[];
+let allNews=[...staticNews];
+let lastRefreshTime=null;
+let feedStatus='connecting';
+
+// ==================== CATEGORIES ====================
+const cats=[{id:'all',label:'All News'},{id:'saudi',label:'\u{1F1F8}\u{1F1E6} Saudi Arabia',st:true},{id:'us-strikes',label:'US-Israel Strikes'},{id:'iran-retaliation',label:'Iran Retaliation'},{id:'iran',label:'Inside Iran'},{id:'gcc',label:'Gulf / GCC'},{id:'hormuz',label:'Strait of Hormuz'},{id:'energy',label:'Oil & Energy'},{id:'defense',label:'Defense'},{id:'diplomacy',label:'Diplomacy'},{id:'global',label:'Global'}];
+
+// ==================== STATE ====================
+let activeFilter='all';
+let enabledSources=new Set(mediaSources.map(m=>m.id));
+
+// ==================== RSS CONFIG ====================
+const REFRESH_MS=180000;
+const RSS_FEEDS=[
+  'https://news.google.com/rss/search?q=Iran+crisis+OR+Iran+war+OR+Iran+strikes+OR+%22Operation+Epic+Fury%22&hl=en-US&gl=US&ceid=US:en',
+  'https://news.google.com/rss/search?q=Saudi+Arabia+Iran+OR+Aramco+OR+Gulf+war&hl=en-US&gl=US&ceid=US:en',
+  'https://news.google.com/rss/search?q=%22Strait+of+Hormuz%22+OR+%22Middle+East%22+oil+war&hl=en-US&gl=US&ceid=US:en',
+  'https://feeds.bbci.co.uk/news/world/middle_east/rss.xml',
+  'https://www.aljazeera.com/xml/rss/all.xml',
+];
+const RELEVANCE_RE=/iran|saudi|aramco|gulf|gcc|hormuz|tehran|irgc|khamenei|israel|idf|hezbollah|lebanon|beirut|drone|missile|strike|middle.east|yemen|houthi|qatar|uae|dubai|bahrain|kuwait|oman|centcom|pentagon|crude|oil.price|brent|opec/i;
+const SOURCE_MAP={'cnn':{id:'cnn',sn:'CNN'},'cnn.com':{id:'cnn',sn:'CNN'},'bbc':{id:'bbc',sn:'BBC'},'bbc news':{id:'bbc',sn:'BBC'},'bbc.com':{id:'bbc',sn:'BBC'},'bbc.co.uk':{id:'bbc',sn:'BBC'},'al jazeera':{id:'aljazeera',sn:'Al Jazeera'},'al jazeera english':{id:'aljazeera',sn:'Al Jazeera'},'aljazeera.com':{id:'aljazeera',sn:'Al Jazeera'},'cnbc':{id:'cnbc',sn:'CNBC'},'cnbc.com':{id:'cnbc',sn:'CNBC'},'reuters':{id:'reuters',sn:'Reuters'},'reuters.com':{id:'reuters',sn:'Reuters'},'abc news':{id:'abc',sn:'ABC News'},'abc7':{id:'abc',sn:'ABC News'},'the guardian':{id:'guardian',sn:'The Guardian'},'the new york times':{id:'nyt',sn:'NYT'},'nytimes.com':{id:'nyt',sn:'NYT'},'the associated press':{id:'ap',sn:'AP'},'ap news':{id:'ap',sn:'AP'},'time':{id:'time',sn:'TIME'},'fortune':{id:'fortune',sn:'Fortune'},'arab news':{id:'arabnews',sn:'Arab News'},'al arabiya':{id:'alarabiya',sn:'Al Arabiya'},'times of israel':{id:'toi',sn:'Times of Israel'},'india tv news':{id:'indiatv',sn:'India TV'}};
+
+// ==================== BUILD MEDIA PANEL ====================
+function buildMediaPanel(){
+  const groups={};
+  mediaSources.forEach(m=>{if(!groups[m.group])groups[m.group]=[];groups[m.group].push(m)});
+  let html='';
+  Object.entries(groups).forEach(([g,items])=>{
+    html+=`<div class="mp-group"><div class="mp-group-title">${g}</div>`;
+    items.forEach(m=>{
+      html+=`<div class="mp-item" onclick="this.querySelector('input').click()">
+        <input type="checkbox" checked data-src="${m.id}" onclick="event.stopPropagation();toggleSource('${m.id}',this.checked)">
+        <div class="dot" style="background:${m.color}"></div>
+        <span class="name">${m.name}</span>
+        <div class="type">${m.type}</div>
+      </div>`;
+    });
+    html+='</div>';
+  });
+  document.getElementById('mediaList').innerHTML=html;
+}
+
+function toggleSource(id,on){
+  if(on)enabledSources.add(id);else enabledSources.delete(id);
+  renderCards();
+}
+function toggleAll(on){
+  document.querySelectorAll('.mp-item input').forEach(cb=>{cb.checked=on});
+  if(on)mediaSources.forEach(m=>enabledSources.add(m.id));else enabledSources.clear();
+  renderCards();
+}
+
+// ==================== FILTER TABS ====================
+function buildFilters(){
+  const fb=document.getElementById('filterBar');
+  fb.innerHTML='';
+  cats.forEach((c,i)=>{
+    const cnt=c.id==='all'?allNews.length:allNews.filter(n=>n.cat.includes(c.id)||(c.id==='saudi'&&n.saudi)).length;
+    if(cnt===0&&c.id!=='all')return;
+    const b=document.createElement('button');
+    b.className='ft'+(c.id===activeFilter?' active':'')+(c.st?' st':'');
+    b.dataset.f=c.id;
+    b.textContent=c.label;
+    b.addEventListener('click',()=>{document.querySelectorAll('.ft').forEach(t=>t.classList.remove('active'));b.classList.add('active');activeFilter=c.id;renderCards()});
+    fb.appendChild(b);
+  });
+}
+
+// ==================== RENDER CARDS ====================
+function renderCards(){
+  const f=activeFilter;
+  let items=f==='all'?[...allNews]:allNews.filter(n=>n.cat.includes(f)||(f==='saudi'&&n.saudi));
+  items=items.filter(n=>enabledSources.has(n.s));
+  items.sort((a,b)=>{
+    // Live items first, then saudi in 'all', then breaking
+    if(a.live&&!b.live)return -1;if(!a.live&&b.live)return 1;
+    if(f==='all'){if(a.saudi&&!b.saudi)return -1;if(!a.saudi&&b.saudi)return 1}
+    if(a.brk&&!b.brk)return -1;if(!a.brk&&b.brk)return 1;
+    return 0;
+  });
+  document.getElementById('cards').innerHTML=items.map(n=>`
+    <a href="${n.url}" target="_blank" rel="noopener" class="card ${n.saudi?'saudi':''} ${n.brk?'brk':''} ${n.live?'live-item':''}">
+      <div class="card-top">
+        <span class="src-b ${n.s}">${n.sn}</span>
+        ${n.saudi?'<span class="sf">\u{1F1F8}\u{1F1E6} Saudi</span>':''}
+        ${n.live?'<span class="lt">LIVE</span>':''}
+        ${n.brk?'<span class="bt">BREAKING</span>':''}
+        <span class="ct">${n.time}</span>
+      </div>
+      <div class="card-title">${escHtml(n.t)}</div>
+      <div class="card-desc">${escHtml(n.d)}</div>
+      <div class="tags">${(n.tags||[]).map(t=>`<span class="tag ${n.saudi?'ts':''}">#${escHtml(t)}</span>`).join('')}</div>
+    </a>
+  `).join('')||'<p style="color:var(--tx3);text-align:center;padding:40px">No articles match current filters.</p>';
+  document.getElementById('fc').textContent=`${items.length} articles`;
+}
+
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+// ==================== TICKER ====================
+function buildTicker(){
+  const brk=allNews.filter(n=>n.brk||n.live).slice(0,25);
+  const h=brk.map(n=>`<a href="${n.url}" target="_blank" rel="noopener" class="ti ${n.saudi?'sa':''}">${escHtml(n.t)}</a>`).join('');
+  document.getElementById('tickerS').innerHTML=h+h;
+}
+
+// ==================== LIVE RSS FETCHING ====================
+async function fetchFeed(rssUrl){
+  // Try rss2json first
+  try{
+    const res=await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`);
+    if(res.ok){
+      const data=await res.json();
+      if(data.status==='ok'&&data.items){
+        return data.items.map(it=>({
+          title:it.title||'',
+          description:(it.description||it.content||'').replace(/<[^>]*>/g,'').slice(0,300),
+          link:it.link||'',
+          pubDate:new Date(it.pubDate||Date.now()),
+          source:it.author||'',
+        }));
+      }
+    }
+  }catch(e){}
+  // Fallback: allorigins + XML parse
+  try{
+    const res=await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`);
+    if(res.ok){
+      const data=await res.json();
+      const parser=new DOMParser();
+      const xml=parser.parseFromString(data.contents,'text/xml');
+      return[...xml.querySelectorAll('item')].map(item=>({
+        title:item.querySelector('title')?.textContent||'',
+        description:(item.querySelector('description')?.textContent||'').replace(/<[^>]*>/g,'').slice(0,300),
+        link:item.querySelector('link')?.textContent||'',
+        pubDate:new Date(item.querySelector('pubDate')?.textContent||Date.now()),
+        source:item.querySelector('source')?.textContent||'',
+      }));
+    }
+  }catch(e){}
+  return[];
+}
+
+function mapSource(sourceName,link){
+  const key=(sourceName||'').toLowerCase().trim();
+  if(SOURCE_MAP[key])return SOURCE_MAP[key];
+  // Try matching from URL hostname
+  try{
+    const host=new URL(link).hostname.replace('www.','').replace('.com','').replace('.co.uk','').replace('.net','');
+    if(SOURCE_MAP[host])return SOURCE_MAP[host];
+    for(const[k,v]of Object.entries(SOURCE_MAP)){if(host.includes(k)||k.includes(host))return v;}
+  }catch(e){}
+  return{id:'live',sn:sourceName||'Live'};
+}
+
+function categorize(text){
+  text=text.toLowerCase();
+  const c=[];
+  if(/saudi|aramco|riyadh|jeddah|mbs|kingdom of saudi|tadawul|opec/.test(text))c.push('saudi');
+  if(/us.strike|operation epic|american.strike|pentagon|centcom|us.military|us.forces/.test(text))c.push('us-strikes');
+  if(/iran.*(retalia|strike|attack|missile|drone|launch)|irgc.*(launch|attack|strike|warn)/.test(text))c.push('iran-retaliation');
+  if(/iran|tehran|irgc|khamenei|persian|isfahan|qom/.test(text))c.push('iran');
+  if(/gcc|gulf|uae|dubai|qatar|doha|bahrain|manama|kuwait|oman/.test(text))c.push('gcc');
+  if(/hormuz|strait/.test(text))c.push('hormuz');
+  if(/oil|crude|brent|energy|opec|barrel|refiner|lng|tanker|pipeline/.test(text))c.push('energy');
+  if(/defense|military|missile|intercept|air.defense|patriot|iron.dome|weapon/.test(text))c.push('defense');
+  if(/diplomat|ambassador|un\b|united.nations|ceasefire|negotiat|summit|sanction/.test(text))c.push('diplomacy');
+  if(/israel|idf|netanyahu|tel.aviv|jerusalem/.test(text))c.push('israel');
+  if(/hezbollah|lebanon|beirut/.test(text))c.push('lebanon');
+  if(c.length===0)c.push('global');
+  return c;
+}
+
+function extractTags(title){
+  const kw=['Iran','Saudi','Aramco','Israel','IDF','IRGC','Hormuz','Oil','Hezbollah','Lebanon','Beirut','UAE','Dubai','Qatar','Bahrain','Kuwait','Trump','CENTCOM','Pentagon','UN','EU','Russia','China','Drone','Missile','Houthi','Yemen','Gaza'];
+  return kw.filter(w=>title.toLowerCase().includes(w.toLowerCase())).slice(0,4);
+}
+
+function timeAgo(date){
+  const diff=Date.now()-date.getTime();
+  const mins=Math.floor(diff/60000);
+  if(mins<1)return'Just now';
+  if(mins<60)return`${mins}m ago`;
+  const hrs=Math.floor(mins/60);
+  if(hrs<24)return`${hrs}h ago`;
+  const days=Math.floor(hrs/24);
+  return`${days}d ago`;
+}
+
+function isDuplicate(title,existing){
+  const words=new Set(title.toLowerCase().replace(/[^a-z0-9\s]/g,'').split(/\s+/).filter(w=>w.length>3));
+  if(words.size<3)return false;
+  return existing.some(item=>{
+    const iw=new Set(item.t.toLowerCase().replace(/[^a-z0-9\s]/g,'').split(/\s+/).filter(w=>w.length>3));
+    const overlap=[...words].filter(w=>iw.has(w)).length;
+    return overlap>=Math.min(4,words.size*0.6);
+  });
+}
+
+async function fetchAllFeeds(){
+  const btn=document.getElementById('refreshBtn');
+  btn.classList.add('spinning');
+  document.getElementById('lastUpd').textContent='Updating...';
+  feedStatus='updating';
+  let allItems=[];
+  try{
+    const results=await Promise.allSettled(RSS_FEEDS.map(u=>fetchFeed(u)));
+    results.forEach(r=>{if(r.status==='fulfilled')allItems.push(...r.value)});
+    // Sort newest first
+    allItems.sort((a,b)=>b.pubDate-a.pubDate);
+    // Deduplicate by title similarity
+    const seen=new Set();
+    const unique=allItems.filter(item=>{
+      const key=item.title.toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,50);
+      if(seen.has(key))return false;
+      seen.add(key);
+      return true;
+    });
+    // Filter for relevance
+    const relevant=unique.filter(item=>RELEVANCE_RE.test(item.title+' '+item.description));
+    // Remove duplicates against static news
+    const fresh=relevant.filter(item=>!isDuplicate(item.title,staticNews));
+    // Convert to our format
+    liveNews=fresh.slice(0,30).map(item=>{
+      const src=mapSource(item.source,item.link);
+      const text=item.title+' '+item.description;
+      const saudi=/saudi|aramco|riyadh|mbs|tadawul|kingdom/i.test(text);
+      return{
+        t:item.title,
+        d:item.description.slice(0,250),
+        s:src.id,
+        sn:src.sn,
+        time:timeAgo(item.pubDate),
+        url:item.link,
+        brk:/break|urgent|just.in|alert/i.test(item.title),
+        saudi:saudi,
+        cat:categorize(text),
+        tags:extractTags(item.title),
+        live:true,
+        pubDate:item.pubDate,
+      };
+    });
+    allNews=[...liveNews,...staticNews];
+    feedStatus='ok';
+    lastRefreshTime=new Date();
+  }catch(e){
+    console.warn('Feed fetch error:',e);
+    feedStatus='error';
+    if(liveNews.length===0)allNews=[...staticNews];
+  }
+  btn.classList.remove('spinning');
+  updateRefreshLabel();
+  buildFilters();
+  renderCards();
+  buildTicker();
+}
+
+function updateRefreshLabel(){
+  const el=document.getElementById('lastUpd');
+  if(feedStatus==='error'){el.textContent='Feed error';return}
+  if(!lastRefreshTime){el.textContent='Connecting...';return}
+  const ago=Math.floor((Date.now()-lastRefreshTime.getTime())/60000);
+  el.textContent=ago<1?'Updated just now':`Updated ${ago}m ago`;
+}
+setInterval(updateRefreshLabel,30000);
+
+// ==================== MOBILE NAV ====================
+function switchMobilePanel(panel){
+  const layout=document.getElementById('mainLayout');
+  layout.classList.remove('show-sources','show-status');
+  if(panel==='sources')layout.classList.add('show-sources');
+  else if(panel==='status')layout.classList.add('show-status');
+  document.querySelectorAll('.mn-tab').forEach(t=>{
+    t.classList.toggle('active',t.dataset.panel===panel);
+  });
+}
+
+// ==================== INIT ====================
+buildMediaPanel();
+buildFilters();
+renderCards();
+buildTicker();
+fetchAllFeeds();
+setInterval(fetchAllFeeds,REFRESH_MS);
+</script>
+</body>
+</html>
