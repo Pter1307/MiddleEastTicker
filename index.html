@@ -379,14 +379,18 @@ let enabledSources=new Set(mediaSources.map(m=>m.id));
 // ==================== RSS CONFIG ====================
 const REFRESH_MS=60000; // 60 seconds
 const RSS_FEEDS=[
+  // Telegram via RSShub bridge
+  'https://rsshub.app/telegram/channel/Middle_East_Spectator',
+  // Google News aggregated
   'https://news.google.com/rss/search?q=Iran+crisis+OR+Iran+war+OR+Iran+strikes+OR+%22Operation+Epic+Fury%22&hl=en-US&gl=US&ceid=US:en',
   'https://news.google.com/rss/search?q=Saudi+Arabia+Iran+OR+Aramco+OR+Gulf+war&hl=en-US&gl=US&ceid=US:en',
   'https://news.google.com/rss/search?q=%22Strait+of+Hormuz%22+OR+%22Middle+East%22+oil+war&hl=en-US&gl=US&ceid=US:en',
+  // Direct news RSS
   'https://feeds.bbci.co.uk/news/world/middle_east/rss.xml',
   'https://www.aljazeera.com/xml/rss/all.xml',
 ];
 const RELEVANCE_RE=/iran|saudi|aramco|gulf|gcc|hormuz|tehran|irgc|khamenei|israel|idf|hezbollah|lebanon|beirut|drone|missile|strike|middle.east|yemen|houthi|qatar|uae|dubai|bahrain|kuwait|oman|centcom|pentagon|crude|oil.price|brent|opec/i;
-const SOURCE_MAP={'cnn':{id:'cnn',sn:'CNN'},'cnn.com':{id:'cnn',sn:'CNN'},'bbc':{id:'bbc',sn:'BBC'},'bbc news':{id:'bbc',sn:'BBC'},'bbc.com':{id:'bbc',sn:'BBC'},'bbc.co.uk':{id:'bbc',sn:'BBC'},'al jazeera':{id:'aljazeera',sn:'Al Jazeera'},'al jazeera english':{id:'aljazeera',sn:'Al Jazeera'},'aljazeera.com':{id:'aljazeera',sn:'Al Jazeera'},'cnbc':{id:'cnbc',sn:'CNBC'},'cnbc.com':{id:'cnbc',sn:'CNBC'},'reuters':{id:'reuters',sn:'Reuters'},'reuters.com':{id:'reuters',sn:'Reuters'},'abc news':{id:'abc',sn:'ABC News'},'abc7':{id:'abc',sn:'ABC News'},'the guardian':{id:'guardian',sn:'The Guardian'},'the new york times':{id:'nyt',sn:'NYT'},'nytimes.com':{id:'nyt',sn:'NYT'},'the associated press':{id:'ap',sn:'AP'},'ap news':{id:'ap',sn:'AP'},'time':{id:'time',sn:'TIME'},'fortune':{id:'fortune',sn:'Fortune'},'arab news':{id:'arabnews',sn:'Arab News'},'al arabiya':{id:'alarabiya',sn:'Al Arabiya'},'times of israel':{id:'toi',sn:'Times of Israel'},'india tv news':{id:'indiatv',sn:'India TV'}};
+const SOURCE_MAP={'middle east spectator':{id:'mes',sn:'MES'},'middle_east_spectator':{id:'mes',sn:'MES'},'t.me':{id:'mes',sn:'MES'},'cnn':{id:'cnn',sn:'CNN'},'cnn.com':{id:'cnn',sn:'CNN'},'bbc':{id:'bbc',sn:'BBC'},'bbc news':{id:'bbc',sn:'BBC'},'bbc.com':{id:'bbc',sn:'BBC'},'bbc.co.uk':{id:'bbc',sn:'BBC'},'al jazeera':{id:'aljazeera',sn:'Al Jazeera'},'al jazeera english':{id:'aljazeera',sn:'Al Jazeera'},'aljazeera.com':{id:'aljazeera',sn:'Al Jazeera'},'cnbc':{id:'cnbc',sn:'CNBC'},'cnbc.com':{id:'cnbc',sn:'CNBC'},'reuters':{id:'reuters',sn:'Reuters'},'reuters.com':{id:'reuters',sn:'Reuters'},'abc news':{id:'abc',sn:'ABC News'},'abc7':{id:'abc',sn:'ABC News'},'the guardian':{id:'guardian',sn:'The Guardian'},'the new york times':{id:'nyt',sn:'NYT'},'nytimes.com':{id:'nyt',sn:'NYT'},'the associated press':{id:'ap',sn:'AP'},'ap news':{id:'ap',sn:'AP'},'time':{id:'time',sn:'TIME'},'fortune':{id:'fortune',sn:'Fortune'},'arab news':{id:'arabnews',sn:'Arab News'},'al arabiya':{id:'alarabiya',sn:'Al Arabiya'},'times of israel':{id:'toi',sn:'Times of Israel'},'india tv news':{id:'indiatv',sn:'India TV'}};
 
 // ==================== BUILD MEDIA PANEL ====================
 function buildMediaPanel(){
@@ -512,6 +516,8 @@ async function fetchFeed(rssUrl){
 function mapSource(sourceName,link){
   const key=(sourceName||'').toLowerCase().trim();
   if(SOURCE_MAP[key])return SOURCE_MAP[key];
+  // Telegram links → MES
+  if(link&&link.includes('t.me/'))return{id:'mes',sn:'MES'};
   // Try matching from URL hostname
   try{
     const host=new URL(link).hostname.replace('www.','').replace('.com','').replace('.co.uk','').replace('.net','');
